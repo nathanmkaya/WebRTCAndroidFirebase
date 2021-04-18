@@ -6,21 +6,19 @@ import android.content.pm.PackageManager
 import android.graphics.PixelFormat
 import android.media.AudioManager
 import android.os.Bundle
-import android.support.v4.app.ActivityCompat
-import android.support.v4.app.Fragment
-import android.support.v4.content.ContextCompat
-import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
-import com.github.devjn.webrtcandroidfirebase.components.GLCircleDrawer
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import com.github.devjn.webrtcandroidfirebase.videocall.VideoCallSession
 import com.github.devjn.webrtcandroidfirebase.videocall.VideoCallStatus
-import com.github.devjn.webrtcandroidfirebase.videocall.VideoRenderers
-import org.webrtc.EglBase
+import com.github.devjn.webrtcandroidfirebase.videocall.VideoSinks
 import org.webrtc.RendererCommon
 import org.webrtc.SurfaceViewRenderer
 
@@ -53,7 +51,7 @@ class VideoCallActivity : AppCompatActivity() {
         if (savedInstanceState == null) {
             val fragment = CallFragment()
             fragment.isOffer = intent.getBooleanExtra("offer", false)
-            fragment.id = intent.getStringExtra("id")
+            fragment.id = intent.getStringExtra("id").toString()
 
             supportFragmentManager.beginTransaction()
                     .replace(R.id.container, fragment, "CallFragment")
@@ -110,7 +108,7 @@ class VideoCallActivity : AppCompatActivity() {
                 handlePermissions()
             else videoSession?.let {
                 initVideoVews()
-                it.videoRenderers.updateViewRenders(localVideoView, remoteVideoView)
+                it.videoSinks.updateViewRenders(localVideoView, remoteVideoView)
             }
         }
 
@@ -150,23 +148,23 @@ class VideoCallActivity : AppCompatActivity() {
         }
 
         private fun handlePermissions() {
-            val canAccessCamera = ContextCompat.checkSelfPermission(context!!, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-            val canRecordAudio = ContextCompat.checkSelfPermission(context!!, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+            val canAccessCamera = ContextCompat.checkSelfPermission(context!!, android.Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+            val canRecordAudio = ContextCompat.checkSelfPermission(context!!, android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
             if (!canAccessCamera || !canRecordAudio) {
-                ActivityCompat.requestPermissions(activity!!, arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO), CAMERA_AUDIO_PERMISSION_REQUEST)
+                ActivityCompat.requestPermissions(activity!!, arrayOf(android.Manifest.permission.CAMERA, android.Manifest.permission.RECORD_AUDIO), CAMERA_AUDIO_PERMISSION_REQUEST)
             } else {
                 startVideoSession()
             }
         }
 
         private fun startVideoSession() {
-            videoSession = VideoCallSession.connect(context!!, id, isOffer, VideoRenderers(localVideoView, remoteVideoView), this::onStatusChanged)
+            videoSession = VideoCallSession.connect(context!!, id, isOffer, VideoSinks(localVideoView, remoteVideoView), this::onStatusChanged)
             initVideoVews()
         }
 
         private fun initVideoVews() {
             localVideoView.apply {
-                init(videoSession?.renderContext, null, EglBase.CONFIG_RGBA, GLCircleDrawer())
+                init(videoSession?.renderContext, null)
                 setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT)
 //                setZOrderMediaOverlay(true)
                 //To make transparent

@@ -28,8 +28,11 @@ enum class VideoCallStatus(val label: Int, val color: Int) {
     FINISHED(R.string.status_finished, R.color.colorConnected);
 }
 
-data class VideoRenderers(private var localView: SurfaceViewRenderer?, private var remoteView: SurfaceViewRenderer?) {
+/*data class VideoRenderers(private var localView: SurfaceViewRenderer?, private var remoteView: SurfaceViewRenderer?) {
     val localRenderer: (VideoRenderer.I420Frame) -> Unit = { f ->
+        localView?.renderFrame(f) ?: sink(f)
+    }
+    val localRenderer2: (VideoRenderer.I420Frame) -> Unit = { f ->
         localView?.renderFrame(f) ?: sink(f)
     }
     //            if (localView == null) this::sink else { f -> localView!!.renderFrame(f) }
@@ -48,6 +51,13 @@ data class VideoRenderers(private var localView: SurfaceViewRenderer?, private v
         Log.w("VideoRenderer", "Missing surface view, dropping frame")
         VideoRenderer.renderFrameDone(frame)
     }
+}*/
+
+data class VideoSinks(var localView: SurfaceViewRenderer?, var remoteView: SurfaceViewRenderer?) {
+    fun updateViewRenders(localView: SurfaceViewRenderer, remoteView: SurfaceViewRenderer) {
+        this.localView = localView
+        this.remoteView = remoteView
+    }
 }
 
 class VideoCallSession(
@@ -55,7 +65,8 @@ class VideoCallSession(
         private val isOfferingPeer: Boolean,
         private val onStatusChangedListener: (VideoCallStatus) -> Unit,
         private val signaler: FirebaseSignaler,
-        val videoRenderers: VideoRenderers) {
+        val videoSinks: VideoSinks
+) {
 
     private var peerConnection: PeerConnection? = null
     private var videoSource: VideoSource? = null
@@ -126,7 +137,7 @@ class VideoCallSession(
     private val factory: PeerConnectionFactory by lazy {
         //Initialize PeerConnectionFactory globals.
         val initializationOptions = PeerConnectionFactory.InitializationOptions.builder(context.applicationContext)
-                .setEnableVideoHwAcceleration(true)
+                /*.setEnableVideoHwAcceleration(true)*/
                 .createInitializationOptions()
         PeerConnectionFactory.initialize(initializationOptions)
 
@@ -235,7 +246,8 @@ class VideoCallSession(
             if (stream.videoTracks.isNotEmpty()) {
                 val remoteVideoTrack = stream.videoTracks.first()
                 remoteVideoTrack.setEnabled(true)
-                remoteVideoTrack.addRenderer(VideoRenderer(videoRenderers.remoteRenderer))
+//                remoteVideoTrack.addRenderer(VideoRenderer(videoRenderers.remoteRenderer))
+                remoteVideoTrack.addSink(videoSinks.remoteView)
             }
         }
     }
@@ -271,12 +283,12 @@ class VideoCallSession(
         val camera = if (useCamera2()) Camera2Enumerator(context) else Camera1Enumerator(false)
 
         videoCapturer = if (front) createFrontCameraCapturer(camera) else createBackCameraCapturer(camera)
-        val videoSource = factory.createVideoSource(videoCapturer)
+        val videoSource = factory.createVideoSource(videoCapturer?.isScreencast!!)
+        videoCapturer?.initialize(SurfaceTextureHelper.create("CaptureThread", renderContext), context, videoSource.capturerObserver)
         videoCapturer?.startCapture(videoHeight, videoWidth, videoFPS)
-        val videoRenderer = VideoRenderer(videoRenderers.localRenderer)
-
         videoTrack = factory.createVideoTrack(VIDEO_TRACK_LABEL, videoSource)
-        videoTrack?.addRenderer(videoRenderer)
+        videoTrack?.setEnabled(true)
+        videoTrack?.addSink(videoSinks.localView)
         return videoTrack
     }
 
@@ -357,6 +369,10 @@ class VideoCallSession(
 
     fun toggleCamera() {
         isFront = !isFront
+        videoCapturer?.apply {
+            stopCapture()
+            dispose()
+        }
         mediaStream?.removeTrack(videoTrack)
         videoTrack?.dispose()
         mediaStream?.addTrack(setupVideoTrack(isFront))
@@ -381,10 +397,13 @@ class VideoCallSession(
         deviceNames
                 .filter { enumerator.isBackFacing(it) }
                 .mapNotNull {
-                    Logging.d(TAG, "Creating other camera capturer.")
+                    Logging.e(TAG, "Creating other camera capturer.")
                     enumerator.createCapturer(it, null)
                 }
-                .forEach { return it }
+                .forEach {
+                    Logging.d(TAG, it.toString())
+                    return it
+                }
 
         Toast.makeText(context, "No back camera found!", Toast.LENGTH_SHORT).show()
         return createFrontCameraCapturer(enumerator)
@@ -396,9 +415,9 @@ class VideoCallSession(
 
     companion object {
 
-        fun connect(context: Context, id: String, isOffer: Boolean, videoRenderers: VideoRenderers, callback: (VideoCallStatus) -> Unit): VideoCallSession {
+        fun connect(context: Context, id: String, isOffer: Boolean, videoSinks: VideoSinks, callback: (VideoCallStatus) -> Unit): VideoCallSession {
             val firebaseHandler = FirebaseSignaler(id)
-            return VideoCallSession(context, isOffer, callback, firebaseHandler, videoRenderers)
+            return VideoCallSession(context, isOffer, callback, firebaseHandler, videoSinks)
         }
 
         private const val STREAM_LABEL = "remoteStream"

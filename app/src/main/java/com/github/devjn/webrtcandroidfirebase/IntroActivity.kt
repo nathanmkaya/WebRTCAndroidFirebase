@@ -3,12 +3,12 @@ package com.github.devjn.webrtcandroidfirebase
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import android.support.design.widget.Snackbar
-import android.support.v7.app.AppCompatActivity
 import android.widget.Button
+import androidx.appcompat.app.AppCompatActivity
 import com.firebase.ui.auth.AuthUI
 import com.firebase.ui.auth.ErrorCodes
 import com.firebase.ui.auth.IdpResponse
+import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import java.util.*
 
@@ -46,7 +46,7 @@ class IntroActivity : AppCompatActivity() {
     }
 
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         // RC_SIGN_IN is the request code you passed into startActivityForResult(...) when starting the sign in flow.
         if (requestCode == RC_SIGN_IN) {
@@ -65,12 +65,12 @@ class IntroActivity : AppCompatActivity() {
                     return
                 }
 
-                if (response.errorCode == ErrorCodes.NO_NETWORK) {
+                if (response.error?.errorCode == ErrorCodes.NO_NETWORK) {
                     showSnackbar(R.string.no_internet_connection)
                     return
                 }
 
-                if (response.errorCode == ErrorCodes.UNKNOWN_ERROR) {
+                if (response.error?.errorCode == ErrorCodes.UNKNOWN_ERROR) {
                     showSnackbar(R.string.unknown_error)
                     return
                 }

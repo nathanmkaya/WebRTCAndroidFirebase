@@ -61,10 +61,10 @@ class FirebaseSignaler(val callerID: String) {
             onMessage(dataSnapshot)
         }
 
-        override fun onChildMoved(dataSnapshot: DataSnapshot?, p1: String?) {
+        override fun onChildMoved(snapshot: DataSnapshot, p1: String?) {
         }
 
-        override fun onChildRemoved(dataSnapshot: DataSnapshot?) {
+        override fun onChildRemoved(snapshot: DataSnapshot) {
         }
 
         override fun onCancelled(e: DatabaseError) {

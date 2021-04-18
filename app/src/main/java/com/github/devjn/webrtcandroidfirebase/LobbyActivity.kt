@@ -3,12 +3,12 @@ package com.github.devjn.webrtcandroidfirebase
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
-import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
 import com.github.devjn.webrtcandroidfirebase.FirebaseData.myID
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -34,7 +34,7 @@ class LobbyActivity : AppCompatActivity() {
 
         listView.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
             Log.w("TAG", "clicked: " + adapter.getItem(position))
-            startVideoCall(adapter.getItem(position).first)
+            startVideoCall(adapter.getItem(position)!!.first)
         }
         val emptyTextView =  TextView(this)
         emptyTextView.setText("No contacts available")
@@ -88,7 +88,8 @@ class LobbyActivity : AppCompatActivity() {
             }
         }
 
-        override fun onCancelled(p0: DatabaseError?) {
+        override fun onCancelled(error: DatabaseError) {
+
         }
     }
 
@@ -99,12 +100,15 @@ class LobbyActivity : AppCompatActivity() {
                 return
             }
             dataSnapshot.children.forEach {
-                if (it.exists() && it.key != myID)
-                    adapter.add(Pair(it.key, it.getValue(ContactData::class.java)!!))
+                if (it.exists() && it.key != myID) {
+//                    adapter.add(Pair(it.key, it.getValue(ContactData::class.java)))
+                    adapter.add(Pair(it.key!!, it.getValue(ContactData::class.java)!!))
+                }
             }
         }
 
-        override fun onCancelled(p0: DatabaseError?) {
+        override fun onCancelled(error: DatabaseError) {
+
         }
     }
 
@@ -121,8 +125,8 @@ class LobbyActivity : AppCompatActivity() {
             val txtName = convertView!!.findViewById(R.id.txtName) as TextView
             val imageView = convertView.findViewById(R.id.imageView) as ImageView
             // Populate the data into the template view using the data object
-            txtName.text = contact.second.name
-            imageView.setImageResource(if(contact.second.online) R.drawable.round_green else R.drawable.round_red)
+            txtName.text = contact?.second?.name
+            imageView.setImageResource(if (contact?.second!!.online) R.drawable.round_green else R.drawable.round_red)
 
             return convertView
         }
